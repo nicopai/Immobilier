@@ -16,6 +16,7 @@ class PapSpider(scrapy.Spider):
         self.charger_annonce_parse()
         self.nb_pages = 0
         self.startTimeStr = dt.datetime.now().strftime('%Y%m%d.%H%M%S')
+        self.nb_already_parsed = 0
         if not os.path.exists('scrappeddocuments'):
             os.mkdir('scrappeddocuments')
 
@@ -37,7 +38,7 @@ class PapSpider(scrapy.Spider):
 
     def start_requests(self):
         urls = [
-            'https://www.pap.fr/annonce/locations-appartement-paris-75-g439-du-studio-au-2-pieces',
+            'https://www.pap.fr/annonce/locations-appartement-paris-75-g439-du-studio-au-3-pieces',
         ]
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse)
@@ -60,12 +61,15 @@ class PapSpider(scrapy.Spider):
             last_update = dateparser.parse(date_pattern.findall(last_update_str)[0]).date().strftime('%y%m%d')
 
             annonce_id_date = (annonce_id, last_update)
-            annonce_deja_parse = (annonce_id_date in self._annonces_parse) or annonce_deja_parse
-            self._annonces_parse.append(annonce_id_date)
+            annonce_deja_parse = (annonce_id_date in self._annonces_parse)
+
             if annonce_deja_parse:
+                self.nb_already_parsed += 1
                 self.logger.debug('{} is already parsed'.format(annonce_id_date))
             else:
                 self.logger.debug('Parsing {}'.format(annonce_id_date))
+                self.nb_already_parsed = 0
+                self._annonces_parse.append(annonce_id_date)
                 lien_annonce = item.css('div.item-content a.item-title::attr(href)').extract_first()
                 req = response.follow(lien_annonce, self.parse_annonce)
                 print('{}'.format(annonce_id))
@@ -75,7 +79,7 @@ class PapSpider(scrapy.Spider):
         self.sauver_annonce_parse()
         self.nb_pages += 1
         next_page = response.css('li.next a::attr(href)').extract_first()
-        if next_page and not annonce_deja_parse and self.nb_pages < 1:
+        if next_page and self.nb_already_parsed < 3 and self.nb_pages < 30:
             req = response.follow(next_page, self.parse)
             yield req
 
@@ -113,7 +117,6 @@ class PapSpider(scrapy.Spider):
         price_str = response.css('span.item-price::text').extract_first().replace('.','')
         item['price'] = float(number_pattern.findall(price_str)[0])
 
-
         title_str  = response.css('span.h1::text').extract_first()
         item['title'] = title_str
         description_str = response.css('div.margin-bottom-30 p::text').extract()
@@ -133,3 +136,5 @@ class PapSpider(scrapy.Spider):
         date_pattern = re.compile('/[^/]*$')
         item['last_update'] = dateparser.parse(date_pattern.findall(last_update_str)[0]).date().strftime('%y%m%d')
         return item
+
+

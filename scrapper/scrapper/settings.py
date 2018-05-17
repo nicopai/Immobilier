@@ -91,4 +91,5 @@ ITEM_PIPELINES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 
-DOWNLOAD_DELAY = 10
+DOWNLOAD_DELAY = 7
+
