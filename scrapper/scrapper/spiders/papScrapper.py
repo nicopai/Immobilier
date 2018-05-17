@@ -16,6 +16,8 @@ class PapSpider(scrapy.Spider):
         self.charger_annonce_parse()
         self.nb_pages = 0
         self.startTimeStr = dt.datetime.now().strftime('%Y%m%d.%H%M%S')
+        if not os.path.exists('scrappeddocuments'):
+            os.mkdir('scrappeddocuments')
 
     def charger_annonce_parse(self):
         if not os.path.exists('annonce.csv'):
